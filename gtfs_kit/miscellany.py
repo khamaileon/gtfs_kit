@@ -718,7 +718,18 @@ def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
     f = feed.stops.copy()
     cond = f.stop_id.isin(stop_ids)
     if "location_type" in f.columns:
-        cond |= ~f.location_type.isin([0, np.nan])
+        if "parent_station" in f.columns:
+            parent_stations = f.loc[
+                lambda x: x.stop_id.isin(stop_ids)
+            ].parent_station.unique()
+            # Slice stations
+            cond |= (f.location_type == 1) & f.stop_id.isin(parent_stations)
+            # Slice entrances
+            cond |= (f.location_type == 2) & f.parent_station.isin(parent_stations)
+
+        else:
+            cond |= ~f.location_type.isin([0, np.nan])
+
     feed.stops = f[cond].copy()
 
     # Slice calendar
